@@ -1,0 +1,39 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "node",
+            "request": "launch",
+            "name": "Launch Program",
+            "skipFiles": [
+                "<node_internals>/**"
+            ],
+            "program": "${workspaceFolder}/packages/backend/node_modules/@medusajs/workflows-sdk/dist/medusa-workflow.js"
+        },
+        {
+            "type": "node",
+            "request": "launch",
+            "name": "Debug Backend-onezero",
+            
+            "program": "${workspaceFolder}/packages/backend/node_modules/@medusajs/medusa/dist/bin/medusa.js",
+            "cwd": "${workspaceFolder}/packages/backend",
+            "args": [
+              "start"
+            ],
+            "runtimeArgs": [
+              "--preserve-symlinks",
+              "--preserve-symlinks-main",
+              "--trace-warnings","--experimental-modules"
+            ],
+            "env": {
+            "DEBUG": "express:router::route",
+            "PORT":"9500"
+            },
+            "console": "integratedTerminal",
+            "trace": true
+          },
+    ]
+}

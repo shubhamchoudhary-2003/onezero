@@ -1,16 +1,19 @@
 {
-  "name": "medusa-starter-default",
+  "name": "medusa-plugin-ftp",
   "version": "0.0.1",
   "description": "A starter for Medusa projects.",
   "author": "Medusa (https://medusajs.com)",
   "license": "MIT",
+  "type": "commonjs",
   "keywords": [
     "sqlite",
     "postgres",
     "typescript",
     "ecommerce",
     "headless",
-    "medusa"
+    "medusa",
+    "medusa-plugin",
+    "ftp"
   ],
   "scripts": {
     "clean": "cross-env ./node_modules/.bin/rimraf dist",
@@ -31,12 +34,9 @@
     "@medusajs/event-bus-local": "latest",
     "@medusajs/event-bus-redis": "^1.8.13",
     "@medusajs/file-local": "latest",
-    "@medusajs/medusa": "1.20.7",
-    "@medusajs/ui": "^3.0.0",
-    "@rsc-labs/medusa-documents": "^0.8.3",
-    "@rsc-labs/medusa-store-analytics": "^0.13.1",
+    "@medusajs/medusa": "^1.20.6",
     "@tanstack/react-query": "4.22.0",
-    "add": "^2.0.6",
+    "basic-ftp": "^5.0.5",
     "body-parser": "^1.19.0",
     "cors": "^2.8.5",
     "dotenv": "16.3.1",
@@ -45,11 +45,9 @@
     "medusa-interfaces": "latest",
     "medusa-payment-manual": "latest",
     "medusa-payment-stripe": "latest",
-    "medusa-plugin-auth": "^1.11.1",
-    "medusa-react": "^9.0.17",
     "prism-react-renderer": "^2.0.4",
-    "typeorm": "^0.3.16",
-    "yarn": "^1.22.22"
+    "ssh2-sftp-client": "^10.0.3",
+    "typeorm": "^0.3.16"
   },
   "devDependencies": {
     "@babel/cli": "^7.14.3",
@@ -58,9 +56,11 @@
     "@medusajs/medusa-cli": "latest",
     "@stdlib/number-float64-base-normalize": "0.0.8",
     "@types/express": "^4.17.13",
-    "@types/jest": "^27.4.0",
+    "@types/jest": "^29.5.12",
     "@types/mime": "1.3.5",
+    "@types/multer": "^1.4.11",
     "@types/node": "^17.0.8",
+    "@types/ssh2-sftp-client": "^9.0.3",
     "babel-preset-medusa-package": "^1.1.19",
     "cross-env": "^7.0.3",
     "eslint": "^8.23.1",
@@ -79,8 +79,7 @@
     "rimraf": "^3.0.2",
     "ts-jest": "^27.0.7",
     "ts-loader": "^9.2.6",
-    "@typescript-eslint/eslint-plugin": "^5.0.0",
-    "@typescript-eslint/parser": "^5.0.0",  
+    "ts-node": "^10.9.2",
     "typescript": "^4.5.2"
   },
   "jest": {
@@ -107,10 +106,12 @@
       "**/*.(t|j)s"
     ],
     "coverageDirectory": "./coverage",
-    "testEnvironment": "node"
+    "testEnvironment": "node",
+    "setupFiles": [
+      "dotenv/config"
+    ]
   },
   "resolutions": {
-    "string-width": "4.2.3",
-    "**/@medusajs/medusa": "1.20.7"
+    "string-width": "4.2.3"
   }
 }
