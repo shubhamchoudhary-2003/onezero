@@ -30,7 +30,7 @@
             ],
             "env": {
             "DEBUG": "express:router::route",
-            "PORT":"9500"
+            "PORT":"9000"
             },
             "console": "integratedTerminal",
             "trace": true

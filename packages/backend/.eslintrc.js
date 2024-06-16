@@ -56,7 +56,7 @@ module.exports = {
         node: true,
         jest: true
     },
-    ignorePatterns: ["**/reports", "**/dist", "**/coverage","**/node_modules"],
+    ignorePatterns: ["**/reports", "**/dist", "**/coverage", "**/node_modules"],
     overrides: [
         {
             files: ["*.ts", "*.tsx"],

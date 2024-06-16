@@ -1,6 +1,13 @@
 {
+    "name": "the-best-monorepo",
+    "version": "0.1.0",
+    "private": true,
+    "packageManager": "pnpm@6.14.1",
+    "scripts": {  
+      "dev": "turbo dev",
+      "build":"turbo build"
+    },
+  
   "dependencies": {
-    "@sgftech/medusa-plugin-product-variant-licenses": "/home/ec2-user/onezero/onezero/external-dependencies/medusa-plugin-product-variant-licenses/sgftech-medusa-plugin-product-variant-licenses-0.0.1.tgz",
-    "medusa-payment-stripe-subscription": "/home/ec2-user/onezero/onezero/external-dependencies/medusa-payment-stripe-subscription/medusa-payment-stripe-subscription-0.0.1.tgz"
-  }
+    }
 }

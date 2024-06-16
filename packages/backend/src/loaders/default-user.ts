@@ -23,8 +23,20 @@ export default async (container: AwilixContainer): Promise<void> => {
     const productService = container.resolve("productService") as ProductService
     const productTypeService = container.resolve("productTypeService") as ProductTypeService
 
-    
     try {
+     await   userService.retrieveByEmail(process.env.DEFAULT_USER_EMAIL)
+    }
+    catch(e){
+    await userService.create(
+        {
+            email: process.env.DEFAULT_USER_EMAIL,
+            role: UserRoles.ADMIN
+        },
+        process.env.DEFAULT_USER_PASSWORD
+    );
+
+    }
+
         await userService.retrieveByEmail(process.env.DEFAULT_USER_EMAIL);
         const store = await storeService.retrieve({
             relations:["currencies"]
@@ -37,7 +49,7 @@ export default async (container: AwilixContainer): Promise<void> => {
         const regions = await regionService.list()
         const taxRate = process.env.DEFAULT_TAX_RATE?parseFloat(process.env.DEFAULT_TAX_RATE):0.2
         const countries = process.env.DEFAULT_REGION_COUNTRIES?.split(",") ?? ["FR", "DE", "IT", "ES", "GB"].map((c) => c.trim().toLowerCase())
-        if(regions.length === 0){
+        if(regions.length === 0){  
             await regionService.create({
                 name: process.env.DEFAULT_REGION_NAME ??"Europe",
                 countries: countries,
@@ -52,15 +64,19 @@ export default async (container: AwilixContainer): Promise<void> => {
            
             const products = await productService.list({},{})
             if(products.length === 0){
-                await productService.create({
+                await productService.withTransaction().create({
                     title: "Default Product Standalone",
                     description: "Standalone Product",
                     status: ProductStatus.DRAFT,
+                    options:[{
+                        title: "license type",
+                    }],
+                    
                     type: {
                         value: "digital"
                     },
                     variants:[{
-                        title: "Default Standalong Variant",
+                        title: "Default Standalone Variant",
                         sku: "default-standalone-variant",
                         prices: [{
                             amount: 10,
@@ -72,6 +88,9 @@ export default async (container: AwilixContainer): Promise<void> => {
                             subscrption: false
                         },
                         manage_inventory:true,
+                        options:[{
+                            value:"perpetual",
+                        }]
                         
                     }],
             
@@ -87,6 +106,9 @@ export default async (container: AwilixContainer): Promise<void> => {
                     type: {
                         value: "digital"
                     },
+                    options:[{
+                        title: "license type",
+                    }],
                     variants:[{
                         title: "Default Subscription Variant",
                         sku: "default-subscription",
@@ -100,7 +122,9 @@ export default async (container: AwilixContainer): Promise<void> => {
                             subscrption: false
                         },
                         manage_inventory:true,
-                    
+                        options:[{
+                            value:"subscription",
+                        }]
                     }],
             
                     
@@ -115,13 +139,8 @@ export default async (container: AwilixContainer): Promise<void> => {
         } catch (e) {
         }
 
-    } catch (e) {
-        await userService.create(
-            {
-                email: process.env.DEFAULT_USER_EMAIL,
-                role: UserRoles.ADMIN
-            },
-            process.env.DEFAULT_USER_PASSWORD
-        );
-    }
+
+    
+        
+    
 };
