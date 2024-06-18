@@ -54,6 +54,7 @@ export default class ProductService extends MedusaProductService {
         options: Record<string, unknown>
     ) {
         // eslint-disable-next-line prefer-rest-params
+        // eslint-disable-next-line prefer-rest-params
         super(container);
 
         this.eventBusService = container.eventBusService;
@@ -78,6 +79,10 @@ export default class ProductService extends MedusaProductService {
                 };
             }
         }
+        data.variants = data.variants?.map((d) => {
+            d.inventory_quantity = 1;
+            return d;
+        });
 
         const result = await super.create(data);
         return result;
@@ -107,6 +112,7 @@ export default class ProductService extends MedusaProductService {
                 }
             }
         }
+
         const result = await super.update(productId, data);
         return result;
     }
