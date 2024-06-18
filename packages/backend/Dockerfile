@@ -11,7 +11,7 @@ ARG NPM_TOKEN
 
 ENV NPM_TOKEN=${NPM_TOKEN}
 
-COPY .npmrc  .npmrc
+#COPY .npmrc  .npmrc
 
 COPY yarn.lock  yarn.lock
 
