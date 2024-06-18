@@ -121,7 +121,7 @@ const plugins = [
         options: medusaOathConfig
     },
     {
-        resolve: "medusa-payment-stripe-subscription",
+        resolve: "@sgftech/medusa-payment-stripe-subscription",
         options: stripeSubscriptionConfig
     },
     {

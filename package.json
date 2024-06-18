@@ -1,13 +1,13 @@
 {
-    "name": "the-best-monorepo",
-    "version": "0.1.0",
-    "private": true,
-    "packageManager": "pnpm@6.14.1",
-    "scripts": {  
-      "dev": "turbo dev",
-      "build":"turbo build"
-    },
-  
+  "name": "the-best-monorepo",
+  "version": "0.1.0",
+  "private": true,
+  "packageManager": "pnpm@6.14.1",
+  "scripts": {
+    "dev": "turbo dev",
+    "build": "turbo build"
+  },
   "dependencies": {
-    }
+    "@sgftech/medusa-plugin-product-variant-licenses": "^0.0.1"
+  }
 }
