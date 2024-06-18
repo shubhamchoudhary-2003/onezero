@@ -1,70 +1,79 @@
-<p align="center">
-  <a href="https://www.medusajs.com">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://user-images.githubusercontent.com/59018053/229103275-b5e482bb-4601-46e6-8142-244f531cebdb.svg">
-    <source media="(prefers-color-scheme: light)" srcset="https://user-images.githubusercontent.com/59018053/229103726-e5b529a3-9b3f-4970-8a1f-c6af37f087bf.svg">
-    <img alt="Medusa logo" src="https://user-images.githubusercontent.com/59018053/229103726-e5b529a3-9b3f-4970-8a1f-c6af37f087bf.svg">
-    </picture>
-  </a>
-</p>
-<h1 align="center">
-  Medusa
-</h1>
+# Medusa Payment Stripe Subscription Plugin
 
-<h4 align="center">
-  <a href="https://docs.medusajs.com">Documentation</a> |
-  <a href="https://www.medusajs.com">Website</a>
-</h4>
+The Medusa Payment Stripe Subscription plugin provides seamless integration with the Stripe payment gateway for managing subscription-based payments in your Medusa e-commerce store.
 
-<p align="center">
-  Building blocks for digital commerce
-</p>
-<p align="center">
-  <a href="https://github.com/medusajs/medusa/blob/master/CONTRIBUTING.md">
-    <img src="https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=flat" alt="PRs welcome!" />
-  </a>
-    <a href="https://www.producthunt.com/posts/medusa"><img src="https://img.shields.io/badge/Product%20Hunt-%231%20Product%20of%20the%20Day-%23DA552E" alt="Product Hunt"></a>
-  <a href="https://discord.gg/xpCwq3Kfn8">
-    <img src="https://img.shields.io/badge/chat-on%20discord-7289DA.svg" alt="Discord Chat" />
-  </a>
-  <a href="https://twitter.com/intent/follow?screen_name=medusajs">
-    <img src="https://img.shields.io/twitter/follow/medusajs.svg?label=Follow%20@medusajs" alt="Follow @medusajs" />
-  </a>
-</p>
+## Installation
 
-## Compatibility
+To install the Medusa Payment Stripe Subscription plugin, follow these steps:
 
-This starter is compatible with versions >= 1.8.0 of `@medusajs/medusa`. 
+1. Ensure that you have Medusa installed and set up in your project.
+2. Run the following command to install the plugin:
 
-## Getting Started
+  ```bash
+  npm install medusa-payment-stripe-subscription
+  ```
 
-Visit the [Quickstart Guide](https://docs.medusajs.com/create-medusa-app) to set up a server.
+3. Configure the plugin by adding the following environment variables to your project:
 
-Visit the [Docs](https://docs.medusajs.com/development/backend/prepare-environment) to learn more about our system requirements.
+  ```bash
+  STRIPE_API_KEY=your_stripe_api_key
+  ```
 
-## What is Medusa
+4. Add the plugin to your Medusa configuration file (`medusa-config.js`):
 
-Medusa is a set of commerce modules and tools that allow you to build rich, reliable, and performant commerce applications without reinventing core commerce logic. The modules can be customized and used to build advanced ecommerce stores, marketplaces, or any product that needs foundational commerce primitives. All modules are open-source and freely available on npm.
+  ```javascript
+  
+const stripeSubscriptionConfig = {
+    api_key: process.env.STRIPE_API_TEST_KEY,
+    webhook_secret: process.env.STRIPE_API_WEBHOOK_TEST_SECRET,
+    /**
+     * Use this flag to capture payment immediately (default is false)
+     */
+    capture: true,
+    /**
+     * set `automatic_payment_methods` to `{ enabled: true }`
+     */
+    automatic_payment_methods: { enabled: true },
+    /**
+     * Set a default description on the intent if the context does not provide one
+     */
+    payment_description: "Payment for order",
+    /**
+     * The delay in milliseconds before processing the webhook event.
+     * @defaultValue 5000
+     */
+    webhook_delay: 5000,
+    /**
+     * The number of times to retry the webhook event processing in case of an error.
+     * @defaultValue 3
+     */
+    webhook_retries: 3,
 
-Learn more about [Medusa’s architecture](https://docs.medusajs.com/development/fundamentals/architecture-overview) and [commerce modules](https://docs.medusajs.com/modules/overview) in the Docs.
+    product_url_prefix: process.env.PRODUCT_URL_PREFIX ?? "/products",
+    shop_base_url: process.env.SHOP_DOMAIN ?? "http://localhost:8000",
+    subscription_interval_period:
+        parseInt(process.env.SUBSCRIPTION_PERIOD) ?? 30,
+    cancel_at_period_end: true
+};
+plugins:[
+  ...
+   {
+        resolve: "medusa-payment-stripe-subscription",
+        options: stripeSubscriptionConfig
+    },
+  ...]
 
-## Roadmap, Upgrades & Plugins
+  ```
 
-You can view the planned, started and completed features in the [Roadmap discussion](https://github.com/medusajs/medusa/discussions/categories/roadmap).
+## Usage
 
-Follow the [Upgrade Guides](https://docs.medusajs.com/upgrade-guides/) to keep your Medusa project up-to-date.
+Once the Medusa Payment Stripe Subscription plugin is installed and configured, you can start using it to handle subscription payments in your Medusa store. Here are some examples of how to use the plugin:
 
-Check out all [available Medusa plugins](https://medusajs.com/plugins/).
 
-## Community & Contributions
+## Contributing
 
-The community and core team are available in [GitHub Discussions](https://github.com/medusajs/medusa/discussions), where you can ask for support, discuss roadmap, and share ideas.
+Contributions to the Medusa Payment Stripe Subscription plugin are welcome! If you find any issues or have suggestions for improvements, please open an issue or submit a pull request on the [GitHub repository](https://github.com/medusajs/medusa-payment-stripe-subscription).
 
-Join our [Discord server](https://discord.com/invite/medusajs) to meet other community members.
+## License
 
-## Other channels
-
-- [GitHub Issues](https://github.com/medusajs/medusa/issues)
-- [Twitter](https://twitter.com/medusajs)
-- [LinkedIn](https://www.linkedin.com/company/medusajs)
-- [Medusa Blog](https://medusajs.com/blog/)
+This plugin is licensed under the [MIT License](LICENSE).

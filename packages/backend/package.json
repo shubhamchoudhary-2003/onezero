@@ -46,6 +46,7 @@
     "medusa-interfaces": "latest",
     "medusa-payment-manual": "latest",
     "medusa-payment-stripe": "latest",
+    "medusa-payment-stripe-subscription": "/home/ec2-user/onezero/onezero/packages/medusa-payment-stripe-subscription/medusa-payment-stripe-subscription-0.0.1.tgz",
     "medusa-plugin-auth": "^1.11.1",
     "medusa-react": "^9.0.17",
     "prism-react-renderer": "^2.0.4",
