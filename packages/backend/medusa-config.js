@@ -262,7 +262,7 @@ const plugins = [
     },
     {
         resolve: "medusa-plugin-meilisearch",
-        options: { config: searchConfig }
+        options: { ...searchConfig }
     }
 ];
 
