@@ -107,8 +107,8 @@ const stripeSubscriptionConfig = {
 };
 
 const searchConfig = {
-    host: process?.env?.MELISEARCH_HOST || "http://localhost:7700",
-    apiKey: process?.env?.MELISEARCH_MASTER_KEY,
+    host: process?.env?.MEILISEARCH_HOST || "http://localhost:7700",
+    apiKey: process?.env?.MEILISEARCH_MASTER_KEY,
     httpClient: async (url, opts) => {
         const response = await axios.request({
             url,
