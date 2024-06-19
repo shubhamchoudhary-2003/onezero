@@ -1,4 +1,5 @@
 const dotenv = require("dotenv");
+const axios = require("axios");
 
 let ENV_FILE_NAME = "";
 switch (process.env.NODE_ENV) {
@@ -105,6 +106,82 @@ const stripeSubscriptionConfig = {
     cancel_at_period_end: true
 };
 
+const searchConfig = {
+    host: process?.env?.MELISEARCH_HOST || "http://localhost:7700",
+    apiKey: process?.env?.MELISEARCH_MASTER_KEY,
+    httpClient: async (url, opts) => {
+        const response = await axios.request({
+            url,
+            data: opts?.body,
+            headers: opts?.headers,
+            method: opts?.method?.toLocaleUpperCase() ?? "GET"
+        });
+        return response.data;
+    },
+    settings: {
+        // index name
+        products: {
+            indexSettings: {
+                // MeiliSearch's setting options to be set on a particular index
+                searchableAttributes: [
+                    "title",
+                    "handle",
+                    "id",
+                    "description",
+                    "hs_code",
+                    "type",
+                    "tags"
+                ],
+                displayedAttributes: ["title", "handle", "id"],
+                filterableAttributes: ["title", "handle", "id", "type", "tags"],
+                rankingRules: [
+                    "words",
+                    "typo",
+                    "proximity",
+                    "attribute",
+                    "sort",
+                    "exactness"
+                ],
+                stopWords: [],
+                synonyms: {},
+                distinctAttribute: null,
+                typoTolerance: {
+                    enabled: true,
+                    minWordSizeForTypos: {
+                        oneTypo: 5,
+                        twoTypos: 9
+                    },
+                    disableOnWords: [],
+                    disableOnAttributes: []
+                },
+                faceting: {
+                    maxValuesPerFacet: 100
+                },
+                pagination: {
+                    maxTotalHits: 1000
+                }
+            },
+            primaryKey: "id",
+            transformer: (product) => ({
+                id: product.id,
+                handle: product.handle,
+                thumbnail: product.images?.[0]?.url,
+                images: product.images,
+                title: product.title,
+                description: product.description,
+                type: product.type.value,
+                categories: product.categories?.map((c) => c.name),
+                tags: product.tags
+                    ?.map((t) => {
+                        t.value;
+                    })
+                    .join(",")
+                // other attributes...
+            })
+        }
+    }
+};
+
 const sendGridParameters = {
     api_key: process.env?.SENDGRID_API_KEY,
     from: process.env?.SENDGRID_NOTIFICATION_FROM_ADDRESS,
@@ -182,6 +259,10 @@ const plugins = [
     {
         resolve: "medusa-plugin-sendgrid",
         options: sendGridParameters
+    },
+    {
+        resolve: "medusa-plugin-meilisearch",
+        options: searchConfig
     }
 ];
 
