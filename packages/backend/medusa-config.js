@@ -106,17 +106,19 @@ const stripeSubscriptionConfig = {
     cancel_at_period_end: true
 };
 
-const searchConfig = {
-    host: process?.env?.MEILISEARCH_HOST || "http://localhost:7700",
-    apiKey: process?.env?.MEILISEARCH_MASTER_KEY,
-    httpClient: async (url, opts) => {
-        const response = await axios.request({
-            url,
-            data: opts?.body,
-            headers: opts?.headers,
-            method: opts?.method?.toLocaleUpperCase() ?? "GET"
-        });
-        return response.data;
+const searchOptions = {
+    config: {
+        host: process?.env?.MEILISEARCH_HOST || "http://localhost:7700",
+        apiKey: process?.env?.MEILISEARCH_MASTER_KEY,
+        httpClient: async (url, opts) => {
+            const response = await axios.request({
+                url,
+                data: opts?.body,
+                headers: opts?.headers,
+                method: opts?.method?.toLocaleUpperCase() ?? "GET"
+            });
+            return response.data;
+        }
     },
     settings: {
         // index name
@@ -262,7 +264,7 @@ const plugins = [
     },
     {
         resolve: "medusa-plugin-meilisearch",
-        options: { ...searchConfig }
+        options: searchOptions
     }
 ];
 
