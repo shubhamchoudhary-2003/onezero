@@ -181,8 +181,8 @@ const plugins = [
     },
     {
         resolve: "medusa-plugin-sendgrid",
-        options: sendGridParameters,
-    },
+        options: sendGridParameters
+    }
 ];
 
 const modules = {
