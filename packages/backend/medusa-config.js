@@ -105,6 +105,29 @@ const stripeSubscriptionConfig = {
     cancel_at_period_end: true
 };
 
+const sendGridParameters = {
+    api_key: process.env?.SENDGRID_API_KEY,
+    from: process.env?.SENDGRID_NOTIFICATION_FROM_ADDRESS,
+    gift_card_created_template: "Thank you for your test gift card",
+    order_placed_template: "order placed card",
+    order_cancelled_template: "This is a test order cancelled card",
+    order_shipped_template: "This is a test order shipped card",
+    order_completed_template: "This is a test order completed card",
+    user_password_reset_template: "This is a test user password reset card",
+    customer_password_reset_template:
+        "This is a test customer password reset card"
+    /* localization: {
+"de-DE": { // locale key
+  gift_card_created_template: [used on gift_card.created],
+  order_placed_template: [used on order.placed],
+  order_cancelled_template: [used on order.cancelled],
+  order_shipped_template: [used on order.shipment_created],
+  order_completed_template: [used on order.completed],
+  user_password_reset_template: [used on user.password_reset],
+  customer_password_reset_template: [used on customer.password_reset],
+}*/
+};
+
 const plugins = [
     "medusa-fulfillment-manual",
     "medusa-payment-manual",
@@ -155,7 +178,11 @@ const plugins = [
         options: {
             enableUI: true
         }
-    }
+    },
+    {
+        resolve: "medusa-plugin-sendgrid",
+        options: sendGridParameters,
+    },
 ];
 
 const modules = {
