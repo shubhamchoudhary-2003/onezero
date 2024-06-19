@@ -107,8 +107,8 @@ const stripeSubscriptionConfig = {
 
 const plugins = [
     "medusa-fulfillment-manual",
-    "medusa-payment-manual",    
-    "@sgftech/medusa-plugin-product-variant-licenses",
+    "medusa-payment-manual",
+    // "@sgftech/medusa-plugin-product-variant-licenses",
     {
         resolve: "@medusajs/file-local",
         options: {
