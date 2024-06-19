@@ -262,23 +262,23 @@ const plugins = [
     },
     {
         resolve: "medusa-plugin-meilisearch",
-        options: searchConfig
+        options: { config: searchConfig }
     }
 ];
 
 const modules = {
-    /* eventBus: {
-    resolve: "@medusajs/event-bus-redis",
-    options: {
-      redisUrl: REDIS_URL
+    eventBus: {
+        resolve: "@medusajs/event-bus-redis",
+        options: {
+            redisUrl: REDIS_URL
+        }
+    },
+    cacheService: {
+        resolve: "@medusajs/cache-redis",
+        options: {
+            redisUrl: REDIS_URL
+        }
     }
-  },
-  cacheService: {
-    resolve: "@medusajs/cache-redis",
-    options: {
-      redisUrl: REDIS_URL
-    }
-  },*/
 };
 
 /** @type {import('@medusajs/medusa').ConfigModule["projectConfig"]} */
