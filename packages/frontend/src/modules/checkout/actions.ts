@@ -6,8 +6,10 @@ import {
   addShippingMethod,
   completeCart,
   deleteDiscount,
+  getCustomer,
   setPaymentSession,
   updateCart,
+  updateCustomer,
 } from "@lib/data"
 import { GiftCard, StorePostCartsCartReq } from "@medusajs/medusa"
 import { revalidateTag } from "next/cache"
@@ -110,6 +112,18 @@ export async function setAddresses(currentState: unknown, formData: FormData) {
   const cartId = cookies().get("_medusa_cart_id")?.value
 
   if (!cartId) return { message: "No cartId cookie found" }
+
+  const baneto_username = formData.get("customer.metadata.baneto_username")
+
+  const customer = await getCustomer();
+  if(customer && !customer.metadata.baneto_username && baneto_username){
+    customer.metadata.baneto_username = baneto_username
+    await updateCustomer({metadata: customer.metadata})
+
+  }
+  if(!customer) return {
+    message: "No customer found, please login via discord first."
+  }
 
   const data = {
     shipping_address: {

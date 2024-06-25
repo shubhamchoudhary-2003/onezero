@@ -18,7 +18,7 @@ const Overview = ({ customer, orders }: OverviewProps) => {
           <span data-testid="welcome-message" data-value={customer?.first_name}>Hello {customer?.first_name}</span>
           <span className="text-small-regular ">
             Signed in as:{" "}
-            <span className="font-semibold" data-testid="customer-email" data-value={customer?.email}>{customer?.email}</span>
+            <span className="font-semibold" data-testid="customer-email" data-value={customer?.email}>{customer?.email} {customer?.metadata.discord_username?"-":""} {customer?.metadata.discord_username as string??""}</span>
           </span>
         </div>
         <div className="flex flex-col py-8 border-t border-gray-200">
@@ -122,6 +122,11 @@ const getProfileCompletion = (
     count++
   }
 
+  if(customer.metadata.baneto_username)
+  {
+    count++
+  }
+
   if (customer.phone) {
     count++
   }
@@ -130,7 +135,7 @@ const getProfileCompletion = (
     count++
   }
 
-  return (count / 4) * 100
+  return (count / 5) * 100
 }
 
 export default Overview

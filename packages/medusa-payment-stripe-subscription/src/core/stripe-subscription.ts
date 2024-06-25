@@ -1,41 +1,62 @@
 import {
-    AbstractPaymentProcessor,
     CartService,
+    CustomerService,
     isPaymentProcessorError,
-    Item,
     LineItem,
     LineItemTaxLine,
+    Logger,
     PaymentProcessorContext,
     PaymentProcessorError,
     PaymentProcessorSessionResponse,
-    PaymentSessionStatus
+    PaymentSessionStatus,
+    Product,
+    ProductService
 } from "@medusajs/medusa";
-import { MedusaError } from "@medusajs/utils";
-import { EOL } from "os";
 import Stripe from "stripe";
-import {
-    ErrorCodes,
-    ErrorIntentStatus,
-    PaymentIntentOptions,
-    StripeOptions
-} from "medusa-payment-stripe";
+import { PaymentIntentOptions } from "medusa-payment-stripe";
 import { StripeSubscriptionOptions } from "../types";
-import StripeBase from "medusa-payment-stripe/dist/core/stripe-base";
+import StripeProvider from "medusa-payment-stripe/dist/services/stripe-provider";
+import { EntityManager } from "typeorm";
+import _ from "lodash";
 
-abstract class StripeSubscriptionService extends StripeBase {
+abstract class StripeSubscriptionService extends StripeProvider {
     static identifier = "stripe-subscription";
 
     protected readonly options_: StripeSubscriptionOptions;
     protected stripe_: Stripe;
     cartService: CartService;
+    productService: ProductService;
+    logger: Logger;
+    manager: EntityManager;
+    customerService: CustomerService;
 
-    protected constructor(container: { cartService: CartService }, options) {
+    constructor(
+        container: {
+            cartService: CartService;
+            productService: ProductService;
+            customerService: CustomerService;
+            logger: Logger;
+            manager: EntityManager;
+        },
+        options
+    ) {
         super(container, options);
 
         this.options_ = options;
         this.cartService = container.cartService;
-
+        this.productService = container.productService;
+        this.logger = container.logger;
+        this.manager = container.manager;
+        this.customerService = container.customerService;
         this.init();
+    }
+
+    withTransaction(transactionManager: EntityManager): this {
+        const clonedSubscriptionService = _.cloneDeep(this);
+        clonedSubscriptionService.manager = transactionManager;
+
+        this.manager = transactionManager;
+        return clonedSubscriptionService;
     }
 
     protected init(): void {
@@ -103,11 +124,12 @@ abstract class StripeSubscriptionService extends StripeBase {
 
     async createStripeTaxRate(
         taxLine: LineItemTaxLine,
-        country_code: string
+        country_code: string,
+        price_inclusive_tax = false
     ): Promise<Stripe.TaxRate> {
         const rate = await this.stripe_.taxRates.create({
             display_name: taxLine.name,
-            inclusive: false,
+            inclusive: price_inclusive_tax,
             percentage: taxLine.rate,
             country: country_code
         });
@@ -132,7 +154,11 @@ abstract class StripeSubscriptionService extends StripeBase {
 
             return (
                 result ??
-                (await this.createStripeTaxRate(taxLine, country_code))
+                (await this.createStripeTaxRate(
+                    taxLine,
+                    country_code,
+                    this.options.taxes_inclusive
+                ))
             );
         });
 
@@ -150,8 +176,9 @@ abstract class StripeSubscriptionService extends StripeBase {
                 "items.variant",
                 "items.variant.prices",
                 "items.variant.product",
-                "items.variant.metadata",
-                "items.tax_lines"
+                "items.tax_lines",
+                "billing_address",
+                "shipping_address"
             ]
         });
         const { region } = await this.cartService.retrieve(cartId, {
@@ -159,9 +186,7 @@ abstract class StripeSubscriptionService extends StripeBase {
         });
         cart.region = region;
         const subscribableItems = cart.items.filter(
-            (i) =>
-                (i.variant.metadata.subscription as string).toLowerCase() ==
-                "true"
+            (i) => i.variant.product.metadata.subscription
         );
 
         if (subscribableItems.length == 0) {
@@ -171,29 +196,54 @@ abstract class StripeSubscriptionService extends StripeBase {
             );
         }
 
+        if (subscribableItems.length != cart.items.length) {
+            return this.buildError(
+                "Not all items in cart are subscribable",
+                {} as PaymentProcessorError
+            );
+        }
+
         if (subscribableItems.length > 20) {
             return this.buildError(
-                "Too subscribable items found in cart",
+                "Too many subscribable items found in cart",
                 {} as PaymentProcessorError
             );
         }
 
         const stripeSubscriptionItems = subscribableItems.map(
             async (i): Promise<Stripe.SubscriptionCreateParams.Item> => {
-                const product = await this.stripe_.products.retrieve(
-                    i.variant.product.metadata.stripe_product_id as string
-                );
+                let product: Product;
+                let stripeProduct: Stripe.Product;
+                if (i.variant.product.metadata?.stripe_product_id) {
+                    try {
+                        stripeProduct = await this.stripe_.products.retrieve(
+                            i.variant.product.metadata
+                                ?.stripe_product_id as string
+                        );
+                    } catch (e) {
+                        try {
+                            product = await this.createStripeProduct(
+                                i.variant.product
+                            );
+                        } catch (e) {
+                            this.logger.error(
+                                `Error creating stripe product for product ${i.variant.product.id}`
+                            );
+                        }
+                    }
+                } else {
+                    product = await this.createStripeProduct(i.variant.product);
+                }
                 const price = i.variant.prices.find(
                     (p) =>
-                        p.currency.code.toLowerCase() ==
+                        p.currency_code.toLowerCase() ==
                         cart.region.currency_code.toLowerCase()
                 );
-                const interval = i.variant.metadata.subscription_interval_period
+                const interval = i.variant.product.metadata.validity_in_days
                     ? (parseInt(
-                          i.variant.metadata
-                              .subscription_interval_period as string
+                          `${i.variant.product.metadata.validity_in_days}`
                       ) as number)
-                    : this.options_.subscription_interval_period ?? 30;
+                    : this.options_.validity_in_days ?? 30;
 
                 const taxRateIds = await this.getOrCreateStripeTaxRates(
                     i,
@@ -203,28 +253,27 @@ abstract class StripeSubscriptionService extends StripeBase {
                 const item: Stripe.SubscriptionCreateParams.Item = {
                     quantity: 1,
                     price_data: {
-                        currency: i.cart.region.currency_code.toLowerCase(),
+                        currency: cart.region.currency_code.toLowerCase(),
                         product: i.variant.product.metadata
-                            .stripe_product_id as string,
+                            ?.stripe_product_id as string,
                         recurring: {
-                            interval: i.variant.metadata
-                                .subscription_interval as
-                                | "day"
-                                | "week"
-                                | "month"
-                                | "year",
+                            interval: "day",
 
                             interval_count: interval
                         },
-                        tax_behavior: "exclusive",
-                        unit_amount: price.amount,
-                        unit_amount_decimal: (price.amount / 100).toFixed(2)
+                        tax_behavior: this.options.taxes_inclusive
+                            ? "inclusive"
+                            : "exclusive",
+                        unit_amount: price.amount
+                        //   unit_amount_decimal: (price.amount / 100).toFixed(2)
                     },
                     tax_rates: taxRateIds,
 
                     metadata: {
                         variant_id: i.variant_id,
-                        region: i.cart.region.id
+                        product_id: i.product_id,
+                        region: cart.region.id,
+                        cart_id: i.cart_id
                     }
                 };
                 return item;
@@ -237,10 +286,16 @@ abstract class StripeSubscriptionService extends StripeBase {
 
     async isSubscriptionCart(cartId: string): Promise<boolean> {
         const cart = await this.cartService.retrieve(cartId, {
-            relations: ["items", "items.variant"]
+            relations: ["items", "items.variant", "items.variant.product"]
         });
 
-        if (cart.items.some((i) => i.variant.metadata.subscription != "true")) {
+        if (
+            cart.items.some(
+                (i) =>
+                    i.variant.product.metadata.subscription != "true" &&
+                    i.variant.product.metadata.subscription != true
+            )
+        ) {
             return false;
         } else {
             return true;
@@ -267,23 +322,28 @@ abstract class StripeSubscriptionService extends StripeBase {
         const description = (cart_context.payment_description ??
             this.options_?.payment_description) as string;
 
-        const intentRequest: Stripe.PaymentIntentCreateParams = {
-            description,
-            amount: Math.round(amount),
-            currency: currency_code,
-            metadata: { resource_id },
-            capture_method: this.options_.capture ? "automatic" : "manual",
-            ...intentRequestData
-        };
-
-        if (this.options_?.automatic_payment_methods) {
-            intentRequest.automatic_payment_methods = { enabled: true };
-        }
-
+        let stripeCustomer: Stripe.Customer;
         if (customer?.metadata?.stripe_id) {
-            intentRequest.customer = customer.metadata.stripe_id as string;
+            try {
+                stripeCustomer = (await this.stripe_.customers.retrieve(
+                    customer.metadata.stripe_id as string,
+                    {
+                        expand: ["subscriptions", "sources"]
+                    }
+                )) as Stripe.Customer;
+            } catch (e) {
+                try {
+                    stripeCustomer = await this.stripe_.customers.create({
+                        email
+                    });
+                } catch (e) {
+                    return this.buildError(
+                        "An error occurred in initiatePayment when creating a Stripe customer",
+                        e
+                    );
+                }
+            }
         } else {
-            let stripeCustomer;
             try {
                 stripeCustomer = await this.stripe_.customers.create({
                     email
@@ -294,43 +354,67 @@ abstract class StripeSubscriptionService extends StripeBase {
                     e
                 );
             }
-
-            intentRequest.customer = stripeCustomer.id;
+        }
+        let medusaCustomerUpdated;
+        try {
+            medusaCustomerUpdated = await this.customerService.retrieve(
+                customer.id
+            );
+            medusaCustomerUpdated = await this.customerService.update(
+                medusaCustomerUpdated.id,
+                {
+                    metadata: {
+                        ...medusaCustomerUpdated.metadata,
+                        stripe_id: stripeCustomer.id
+                    }
+                }
+            );
+        } catch (e) {
+            this.logger.error(`Error updating customer metadata: ${e}`);
         }
 
         let session_data;
         try {
-            const sub = await this.stripe_.subscriptions.retrieve(
-                session_data.id
-            );
-            const itemsExpected = await this.getStripeSubscriptionItemsFromCart(
-                resource_id
-            );
+            try {
+                const sub = await this.stripe_.subscriptions.retrieve(
+                    session_data.id
+                );
+            } catch (e) {
+                const itemsExpected =
+                    await this.getStripeSubscriptionItemsFromCart(resource_id);
 
-            if ((itemsExpected as PaymentProcessorError).error) {
-                return itemsExpected as PaymentProcessorError;
+                if ((itemsExpected as PaymentProcessorError).error) {
+                    return itemsExpected as PaymentProcessorError;
+                }
+
+                const items =
+                    itemsExpected as Stripe.SubscriptionCreateParams.Item[];
+                const createSubscriptionParams: Stripe.SubscriptionCreateParams =
+                    {
+                        items: items,
+                        currency: currency_code,
+                        metadata: { resource_id },
+                        cancel_at_period_end: this.options.cancel_at_period_end,
+
+                        customer: stripeCustomer.id,
+                        collection_method: "charge_automatically",
+                        payment_behavior: "default_incomplete",
+                        payment_settings: {
+                            save_default_payment_method: "on_subscription"
+                        },
+                        expand: ["latest_invoice.payment_intent"]
+                    };
+                try {
+                    session_data = (await this.stripe_.subscriptions.create(
+                        createSubscriptionParams
+                    )) as unknown as Record<string, string>;
+                } catch (e) {
+                    this.logger.error(`Error creating subscription: ${e}`);
+                }
+                // session_data = (await this.stripe_.paymentIntents.create(
+                //   intentRequest
+                // )) as unknown as Record<string, unknown>
             }
-
-            const items =
-                itemsExpected as Stripe.SubscriptionCreateParams.Item[];
-            const createSubscriptionParams: Stripe.SubscriptionCreateParams = {
-                items: items,
-                currency: currency_code,
-                metadata: { resource_id },
-                cancel_at_period_end: this.options.cancel_at_period_end,
-
-                customer: intentRequest.customer,
-                collection_method: "charge_automatically",
-                payment_behavior: "error_if_incomplete"
-            };
-
-            session_data = (await this.stripe_.subscriptions.create(
-                createSubscriptionParams
-            )) as unknown as Record<string, string>;
-
-            // session_data = (await this.stripe_.paymentIntents.create(
-            //   intentRequest
-            // )) as unknown as Record<string, unknown>
         } catch (e) {
             return this.buildError(
                 "An error occurred in InitiatePayment during the creation of the stripe payment intent",
@@ -340,11 +424,11 @@ abstract class StripeSubscriptionService extends StripeBase {
 
         return {
             session_data,
-            update_requests: customer?.metadata?.stripe_id
+            update_requests: medusaCustomerUpdated?.metadata?.stripe_id
                 ? undefined
                 : {
                       customer_metadata: {
-                          stripe_id: intentRequest.customer
+                          stripe_id: stripeCustomer.id
                       }
                   }
         };
@@ -465,21 +549,37 @@ abstract class StripeSubscriptionService extends StripeBase {
                 const items =
                     itemsExpected as Stripe.SubscriptionCreateParams.Item[];
 
-                const subscriptionUpdateParams: Stripe.SubscriptionUpdateParams =
-                    {
-                        items: items,
-                        metadata: { resource_id },
-                        cancel_at_period_end: this.options.cancel_at_period_end,
-                        collection_method: "charge_automatically",
-                        payment_behavior: "error_if_incomplete"
-                    };
+                if (
+                    subscriptionData.status === "active" ||
+                    subscriptionData.status === "trialing"
+                ) {
+                    const subscriptionUpdateParams: Stripe.SubscriptionUpdateParams =
+                        {
+                            items: items,
+                            metadata: { resource_id },
+                            cancel_at_period_end:
+                                this.options.cancel_at_period_end,
 
-                const sessionData = (await this.stripe_.subscriptions.update(
-                    id,
-                    subscriptionUpdateParams
-                )) as unknown as PaymentProcessorSessionResponse["session_data"];
+                            collection_method: "charge_automatically",
+                            payment_behavior: "default_incomplete",
+                            payment_settings: {
+                                save_default_payment_method: "on_subscription"
+                            },
+                            expand: ["latest_invoice.payment_intent"]
+                        };
 
-                return { session_data: sessionData };
+                    const sessionData =
+                        (await this.stripe_.subscriptions.update(
+                            id,
+                            subscriptionUpdateParams
+                        )) as unknown as PaymentProcessorSessionResponse["session_data"];
+
+                    return { session_data: sessionData };
+                } else {
+                    return {
+                        session_data: subscriptionData
+                    } as any;
+                }
             } catch (e) {
                 return this.buildError("An error occurred in updatePayment", e);
             }
@@ -516,6 +616,74 @@ abstract class StripeSubscriptionService extends StripeBase {
             return result;
         } catch (e) {
             return this.buildError("An error occurred in updatePaymentData", e);
+        }
+    }
+    async createStripeProduct(product: Product): Promise<Product> {
+        product = await this.productService.retrieve(product.id);
+
+        const stripeProduct = await this.stripe_.products.create({
+            id: product.id,
+            name: product.title,
+            type: "service",
+            description: product.description,
+            active: product.status === "draft" ? false : true,
+            metadata: {
+                medusa_id: product.id
+            },
+            statement_descriptor: product.title.substring(0, 22),
+            url: `${this.options.shop_base_url}/${
+                this.options.product_url_prefix ?? "/products"
+            }/${product.handle}`
+        });
+
+        // const expandedProduct = await this.productService.retrieve(product.id, {
+        //     relations: ["metadata"]
+        // });
+        const existingMetadata = product.metadata || {};
+        const updatedProduct = await this.productService.update(product.id, {
+            metadata: {
+                ...existingMetadata,
+                stripe_product_id: stripeProduct.id
+            }
+        });
+
+        return updatedProduct;
+    }
+
+    async deleteStripeProduct(product: Product): Promise<void> {
+        product = await this.productService.retrieve(product.id);
+        if (!product.metadata?.stripe_product_id) {
+            return;
+        }
+
+        await this.stripe_.products.del(
+            product.metadata?.stripe_product_id as string
+        );
+    }
+
+    async updateStripeProduct(product: Product): Promise<void> {
+        product = await this.productService.retrieve(product.id);
+        if (product.metadata?.stripe_product_id) {
+            await this.stripe_.products.update(
+                product.metadata?.stripe_product_id as string,
+                {
+                    description: product.description,
+                    active: product.status === "draft" ? false : true,
+                    name: product.title,
+                    statement_descriptor: product.title.substring(0, 22),
+                    url: `${this.options.shop_base_url}/${
+                        this.options.product_url_prefix ?? "/products"
+                    }/${product.handle}`,
+                    metadata: {
+                        medusa_id: product.id
+                    }
+                }
+            );
+        } else {
+            this.logger.warn(
+                `No stripe product id found for product ${product.id}`
+            );
+            await this.createStripeProduct(product);
         }
     }
 }

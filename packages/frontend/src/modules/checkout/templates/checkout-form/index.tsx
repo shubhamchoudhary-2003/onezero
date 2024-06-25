@@ -40,7 +40,7 @@ export default async function CheckoutForm() {
 
   // get customer if logged in
   const customer = await getCustomer()
-
+  
   return (
     <div>
       <div className="w-full grid grid-cols-1 gap-y-8">

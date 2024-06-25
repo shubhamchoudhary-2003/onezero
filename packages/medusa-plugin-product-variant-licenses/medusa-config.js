@@ -105,18 +105,7 @@ const plugins = [
             }
         }
     },
-    {
-        resolve: `@rsc-labs/medusa-store-analytics`,
-        options: {
-          enableUI: true
-        }
-      },
-      {
-        resolve: `@rsc-labs/medusa-documents`,
-        options: {
-          enableUI: true
-        }
-      }
+    
 ];
 
 const modules = {

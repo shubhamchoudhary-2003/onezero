@@ -3,7 +3,7 @@ import Main from "@modules/layout/templates/main"
 import { Providers } from "./provider"
 import "styles/globals.css"
 import { getCustomer } from "@lib/data"
-
+export const dynamic = 'force-dynamic'
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "https://localhost:3000"
 
 export const metadata: Metadata = {

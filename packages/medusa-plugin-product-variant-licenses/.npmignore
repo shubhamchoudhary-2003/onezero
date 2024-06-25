@@ -1,0 +1,11 @@
+.idea
+node_modules
+.DS_store
+.env*
+src
+coverage
+**/__mocks__/*
+**/__tests__/*
+
+tsconfig.tsbuildinfo
+*.tgz

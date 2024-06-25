@@ -122,6 +122,27 @@ export async function updateCustomerPhone(
   }
 }
 
+export async function updateCustomerBanetoUsername(
+  _currentState: Record<string, unknown>,
+  formData: FormData
+) {
+  const customer = {
+    metadata:{banetor_username: formData.get("customer.baneto_username")},
+  } as StorePostCustomersCustomerReq
+
+  try {
+    await updateCustomer(customer).then(() => {
+      revalidateTag("customer")
+    })
+    return { success: true, error: null }
+  } catch (error: any) {
+    return { success: false, error: error.toString() }
+  }
+}
+
+
+
+
 export async function updateCustomerPassword(
   currentState: {
     customer: Omit<Customer, "password_hash">

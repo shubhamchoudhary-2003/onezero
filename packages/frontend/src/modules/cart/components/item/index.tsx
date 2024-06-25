@@ -14,6 +14,8 @@ import Spinner from "@modules/common/icons/spinner"
 import { useState } from "react"
 import ErrorMessage from "@modules/checkout/components/error-message"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
+import Input from "@modules/common/components/input"
+import { productKeys } from "medusa-react"
 
 type ItemProps = {
   item: Omit<LineItem, "beforeInsert">
@@ -24,16 +26,22 @@ type ItemProps = {
 const Item = ({ item, region, type = "full" }: ItemProps) => {
   const [updating, setUpdating] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [quantity, setQuantity] = useState<number>(item.quantity)
+  const [sessionCount, setSessionCount] = useState<number>(item.metadata.sessionCount as number??1)
 
   const { handle } = item.variant.product
 
-  const changeQuantity = async (quantity: number) => {
+  const changeQuantity = async () => {
     setError(null)
     setUpdating(true)
+
+    if(sessionCount<=0||quantity<=0)
+      return;
 
     const message = await updateLineItem({
       lineId: item.id,
       quantity,
+      sessionCount
     })
       .catch((err) => {
         return err.message
@@ -45,6 +53,7 @@ const Item = ({ item, region, type = "full" }: ItemProps) => {
     message && setError(message)
   }
 
+  
   return (
     <Table.Row className="w-full" data-testid="product-row">
       <Table.Cell className="!pl-0 p-4 w-24">
@@ -70,10 +79,13 @@ const Item = ({ item, region, type = "full" }: ItemProps) => {
             <DeleteButton id={item.id} data-testid="product-delete-button" />
             <CartItemSelect
               value={item.quantity}
-              onChange={(value) => changeQuantity(parseInt(value.target.value))}
+              onChange={(value) => {setQuantity(parseInt(`${value}`)); changeQuantity()}}
               className="w-14 h-10 p-4"
               data-testid="product-select-button"
             >
+            <Input label="Number of Sessions" name="number of sessions" type="number" onChange={(value)=>{
+              setSessionCount(parseInt(`${value??1}`)); changeQuantity()}}>
+            </Input>
               {Array.from(
                 {
                   length: Math.min(

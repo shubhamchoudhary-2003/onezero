@@ -12,11 +12,16 @@ import {
     ProductStatus,
     ProductTypeService,
     RegionService,
+    SalesChannelService,
+    ShippingOptionPriceType,
+    ShippingOptionService,
+    ShippingProfileService,
     StoreService,
     UserRoles,
     UserService
 } from "@medusajs/medusa";
 import { AwilixContainer } from "awilix";
+import { EntityManager } from "typeorm";
 
 /**
  * @param container The container in which the registrations are made
@@ -29,16 +34,22 @@ export default async (container: AwilixContainer): Promise<void> => {
     const logger = container.resolve("logger") as Logger;
     const userService = container.resolve("userService") as UserService;
     const storeService = container.resolve("storeService") as StoreService;
-    const currencyService = container.resolve(
-        "currencyService"
-    ) as CurrencyService;
+    const manager = container.resolve("manager") as EntityManager;
+    const shippingOptionService = container.resolve(
+        "shippingOptionService"
+    ) as ShippingOptionService;
+
     const regionService = container.resolve("regionService") as RegionService;
     const productService = container.resolve(
         "productService"
     ) as ProductService;
-    const productTypeService = container.resolve(
-        "productTypeService"
-    ) as ProductTypeService;
+    const salesChannelService = container.resolve(
+        "salesChannelService"
+    ) as SalesChannelService;
+
+    const shippingProfileService = container.resolve(
+        "shippingProfileService"
+    ) as ShippingProfileService;
 
     try {
         await userService.retrieveByEmail(process.env.DEFAULT_USER_EMAIL);
@@ -51,15 +62,18 @@ export default async (container: AwilixContainer): Promise<void> => {
             process.env.DEFAULT_USER_PASSWORD
         );
     }
+    const defaultCurrencyCode =
+        process.env.DEFAULT_CURRENCY.toLowerCase() ?? "eur";
 
-    await userService.retrieveByEmail(process.env.DEFAULT_USER_EMAIL);
     const store = await storeService.retrieve({
         relations: ["currencies"]
     });
-    const defaultCurrencyCode =
-        process.env.DEFAULT_CURRENCY.toUpperCase() ?? "EUR";
+
+    const defaultSalesChannel = await salesChannelService.retrieveDefault();
     if (
-        store.currencies.find((c) => c.code == defaultCurrencyCode) == undefined
+        store.currencies.find(
+            (c) => c.code == defaultCurrencyCode.toLowerCase()
+        ) == undefined
     ) {
         await storeService.addCurrency(defaultCurrencyCode);
     }
@@ -71,23 +85,41 @@ export default async (container: AwilixContainer): Promise<void> => {
     const countries =
         process.env.DEFAULT_REGION_COUNTRIES?.split(",") ??
         ["FR", "DE", "IT", "ES", "GB"].map((c) => c.trim().toLowerCase());
-    if (regions.length === 0) {
-        await regionService.create({
-            name: process.env.DEFAULT_REGION_NAME ?? "Europe",
+    let defaultRegion = regions.find(
+        (r) => r.name === (process.env.DEFAULT_REGION_NAME ?? "Europe")
+    );
+    if (!defaultRegion) {
+        try {
+            defaultRegion = await regionService
+                .withTransaction(manager)
+                .create({
+                    name: process.env.DEFAULT_REGION_NAME ?? "Europe",
+                    countries: countries,
+                    tax_rate: taxRate,
+                    currency_code: defaultCurrencyCode.toLocaleLowerCase(),
+                    payment_providers: ["stripe-subscription"],
+                    fulfillment_providers: ["manual"]
+                });
+        } catch (e) {
+            // noope
+            logger.error("error", e);
+            throw e;
+        }
+    } else {
+        defaultRegion = await regionService.update(defaultRegion.id, {
             countries: countries,
             tax_rate: taxRate,
-            currency_code: defaultCurrencyCode,
-            payment_providers: ["stripe-payment-subscription"],
-            fulfillment_providers: ["fulfillment-manual"]
+            currency_code: defaultCurrencyCode.toLocaleLowerCase(),
+            payment_providers: ["stripe-subscription", "manual"],
+            fulfillment_providers: ["manual"]
         });
     }
-    try {
-        const defaultCurrencyCode =
-            process.env.DEFAULT_CURRENCY.toUpperCase() ?? "EUR";
 
+    try {
         const products = await productService.list({}, {});
+
         if (products.length === 0) {
-            await productService.withTransaction().create({
+            const p1 = await productService.withTransaction().create({
                 title: "Default Product One Time",
                 description: "Standalone Product",
                 status: ProductStatus.DRAFT,
@@ -106,7 +138,7 @@ export default async (container: AwilixContainer): Promise<void> => {
                         sku: "perpetual-membership",
                         prices: [
                             {
-                                amount: 10,
+                                amount: 100,
                                 currency_code: defaultCurrencyCode
                             }
                         ],
@@ -127,7 +159,7 @@ export default async (container: AwilixContainer): Promise<void> => {
                     subscription: false
                 }
             });
-            await productService.create({
+            const p2 = await productService.create({
                 title: "Default Product Subscription",
                 description: "Subscription Product",
                 status: ProductStatus.DRAFT,
@@ -145,7 +177,7 @@ export default async (container: AwilixContainer): Promise<void> => {
                         sku: "periodic-subscription",
                         prices: [
                             {
-                                amount: 10,
+                                amount: 100,
                                 currency_code: defaultCurrencyCode
                             }
                         ],
@@ -164,10 +196,11 @@ export default async (container: AwilixContainer): Promise<void> => {
                 ],
 
                 metadata: {
-                    subscription: true
+                    subscription: true,
+                    validity_in_days: 1
                 }
             });
-            await productService.withTransaction().create({
+            const p3 = await productService.withTransaction().create({
                 title: "License Key Product",
                 description: "Standalone Product",
                 status: ProductStatus.DRAFT,
@@ -186,7 +219,7 @@ export default async (container: AwilixContainer): Promise<void> => {
                         sku: "license-code-1",
                         prices: [
                             {
-                                amount: 10,
+                                amount: 100,
                                 currency_code: defaultCurrencyCode
                             }
                         ],
@@ -208,9 +241,69 @@ export default async (container: AwilixContainer): Promise<void> => {
                     key_url: "https://www.google.com"
                 }
             });
+            products.push(p1, p2, p3);
+        }
+
+        try {
+            await salesChannelService.addProducts(
+                defaultSalesChannel.id,
+                products.map((p) => p.id)
+            );
+        } catch (e) {
+            logger.error("error", e);
+            throw e;
+        }
+        try {
+            storeService.update({
+                name: process.env.STORE_NAME ?? "One-Zero Store"
+            });
+        } catch (e) {
+            logger.error("error", e);
+            throw e;
+        }
+        try {
+            let defaultProfile = await shippingProfileService.createDefault();
+            defaultProfile = await shippingProfileService.addProducts(
+                defaultProfile.id,
+                products.map((p) => p.id)
+            );
+
+            const shippingOptions = await shippingOptionService.list();
+            let inStoreShipping = shippingOptions.find(
+                (s) => s.name == "In-store fulfillment"
+            );
+
+            if (!inStoreShipping) {
+                inStoreShipping = await shippingOptionService.create({
+                    price_type: ShippingOptionPriceType.FLAT_RATE,
+                    name: "In-store fulfillment",
+                    amount: 0,
+                    is_return: false,
+                    region_id: defaultRegion.id,
+                    profile_id: defaultProfile.id,
+                    provider_id: "manual",
+                    data: {}
+                });
+            } else {
+                inStoreShipping = await shippingOptionService.update(
+                    inStoreShipping.id,
+                    {
+                        price_type: ShippingOptionPriceType.FLAT_RATE,
+                        name: "In-store fulfillment",
+                        amount: process.env.PROCESSING_CHARGES
+                            ? parseInt(process.env.PROCESSING_CHARGES)
+                            : 0,
+                        profile_id: defaultProfile.id
+                    }
+                );
+            }
+        } catch (e) {
+            logger.error("error", e);
+            throw e;
         }
         logger.info("Default configuration completed");
     } catch (e) {
         logger.error("error", e);
+        throw e;
     }
 };

@@ -1,6 +1,6 @@
 {
   "name": "@sgftech/medusa-plugin-product-variant-licenses",
-  "version": "0.0.1",
+  "version": "0.0.12",
   "description": "A plugin to handle licenses",
   "author": "SGFGOV",
   "license": "MIT",
@@ -25,9 +25,7 @@
     "start:custom": "cross-env npm run build && node --preserve-symlinks --trace-warnings index.js",
     "dev": "cross-env npm run build:server && medusa develop"
   },
-  "dependencies": {
-   
-  },
+  "dependencies": {},
   "devDependencies": {
     "@babel/cli": "^7.14.3",
     "@babel/core": "^7.14.3",

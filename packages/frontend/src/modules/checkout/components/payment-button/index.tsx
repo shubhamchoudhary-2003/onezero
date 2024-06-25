@@ -36,8 +36,9 @@ const PaymentButton: React.FC<PaymentButtonProps> = ({
   }
 
   const paymentSession = cart.payment_session as PaymentSession
-
+  
   switch (paymentSession.provider_id) {
+    case "stripe-subscription":
     case "stripe":
       return (
         <StripePaymentButton
@@ -108,13 +109,20 @@ const StripePaymentButton = ({
   const handlePayment = async () => {
     setSubmitting(true)
 
+    console.log("processing payment")
+
     if (!stripe || !elements || !card || !cart) {
       setSubmitting(false)
       return
     }
-
+    stripe.confirmPayPalSetup
+    const clientSecret = (session!.data?.client_secret as string | undefined)||
+    ((session.data?.latest_invoice as any)?.payment_intent?.client_secret as string | undefined)
+    
+    const isSubscription = ((session.data?.latest_invoice as any)?.payment_intent?.client_secret !=undefined)
+    if(!isSubscription){
     await stripe
-      .confirmCardPayment(session.data.client_secret as string, {
+      .confirmCardPayment(clientSecret as string, {
         payment_method: {
           card: card,
           billing_details: {
@@ -145,7 +153,7 @@ const StripePaymentButton = ({
           ) {
             onPaymentCompleted()
           }
-
+          console.log("processing payment failed")
           setErrorMessage(error.message || null)
           return
         }
@@ -154,15 +162,63 @@ const StripePaymentButton = ({
           (paymentIntent && paymentIntent.status === "requires_capture") ||
           paymentIntent.status === "succeeded"
         ) {
+          console.log("processing payment successded")
           return onPaymentCompleted()
         }
 
         return
       })
-  }
+    }
+    else{
 
+      const options = {
+        clientSecret: clientSecret,
+        // Fully customizable with appearance API.
+        appearance: {/*...*/},
+      };
+
+      const elements = stripe.elements(options);
+      const paymentElement = elements.create('payment');
+      paymentElement.mount('#payment-element');
+
+    const {error} = await stripe.confirmPayment(
+        {
+          elements,
+          confirmParams: {
+            return_url: "https://example.com/order/123/complete",
+          },
+      });
+
+      
+        if (error) {
+          const pi = error.payment_intent
+          if(pi)
+          if (
+            (pi && pi.status === "requires_capture") ||
+            (pi && pi.status === "succeeded")
+          ) {
+            onPaymentCompleted()
+          }
+          console.log("processing payment failed")
+          setErrorMessage(error.message || null)
+          return
+        }
+      else {
+       
+          console.log("processing payment successded")
+          return onPaymentCompleted()
+        }
+
+        return
+      
+    } 
+    
+  
+  }
   return (
     <>
+    <div id="payment-element">
+    </div>
       <Button
         disabled={disabled || notReady}
         onClick={handlePayment}

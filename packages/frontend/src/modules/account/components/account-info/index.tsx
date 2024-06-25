@@ -57,7 +57,7 @@ const AccountInfo = ({
         <div>
           <Button
             variant="secondary"
-            className="w-[100px] min-h-[25px] py-1"
+            className="w-[100px] min-h-[25px] py-1 bg-white text-gray-500 border border-gray-300 hover:bg-gray-100 hover:text-white hover:border-gray-300 hover:border"
             onClick={handleToggle}
             type={state ? "reset" : "button"}
             data-testid="edit-button"

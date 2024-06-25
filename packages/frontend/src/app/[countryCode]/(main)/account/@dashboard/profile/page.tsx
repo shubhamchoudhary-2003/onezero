@@ -8,6 +8,7 @@ import ProfilePassword from "@modules/account/components/profile-password"
 
 import { getCustomer, listRegions } from "@lib/data"
 import { notFound } from "next/navigation"
+import ProfileBanetoUsername from "@modules/account/components/profile-baneto-username"
 
 export const metadata: Metadata = {
   title: "Profile",
@@ -39,8 +40,12 @@ export default async function Profile() {
         <Divider />
         <ProfilePhone customer={customer} />
         <Divider />
+        <ProfileBanetoUsername customer={customer} />
+        <Divider />
+        
         {/* <ProfilePassword customer={customer} />
         <Divider /> */}
+        
         <ProfileBillingAddress customer={customer} regions={regions} />
       </div>
     </div>

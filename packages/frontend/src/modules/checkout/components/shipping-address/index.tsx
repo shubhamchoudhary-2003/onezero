@@ -20,6 +20,8 @@ const ShippingAddress = ({
   countryCode: string
 }) => {
   const [formData, setFormData] = useState({
+    "customer.metadata.discord_username": customer?.metadata?.discord_username as string || "",
+    "customer.metadata.baneto_username": customer?.metadata?.baneto_username as string|| "",
     "shipping_address.first_name": cart?.shipping_address?.first_name || "",
     "shipping_address.last_name": cart?.shipping_address?.last_name || "",
     "shipping_address.address_1": cart?.shipping_address?.address_1 || "",
@@ -34,7 +36,7 @@ const ShippingAddress = ({
   })
 
   const countriesInRegion = useMemo(
-    () => cart?.region.countries.map((c) => c.iso_2),
+    () => cart?.region.countries.map((c: any) => c.iso_2),
     [cart?.region]
   )
 
@@ -49,6 +51,8 @@ const ShippingAddress = ({
 
   useEffect(() => {
     setFormData({
+      "customer.metadata.discord_username": (customer?.metadata?.discord_username as string) || "",
+      "customer.metadata.baneto_username": (customer?.metadata?.baneto_username as string) || "",
       "shipping_address.first_name": cart?.shipping_address?.first_name || "",
       "shipping_address.last_name": cart?.shipping_address?.last_name || "",
       "shipping_address.address_1": cart?.shipping_address?.address_1 || "",
@@ -61,7 +65,8 @@ const ShippingAddress = ({
       email: cart?.email || "",
       "shipping_address.phone": cart?.shipping_address?.phone || "",
     })
-  }, [cart?.shipping_address, cart?.email])
+  }, [cart?.shipping_address, cart?.email, customer?.metadata?.discord_username,
+     customer?.metadata?.baneto_username])
 
   const handleChange = (
     e: React.ChangeEvent<
@@ -85,6 +90,27 @@ const ShippingAddress = ({
         </Container>
       )}
       <div className="grid grid-cols-2 gap-4">
+      <Input
+          label="Baneto Username"
+          name="customer.metadata.baneto_username"
+          autoComplete="baneto-username"
+          value={formData["customer.metadata.baneto_username"]}
+          onChange={handleChange}
+          required
+          data-testid="customer-metadata-baneto-username-input"
+        />
+
+      <Input
+          label="Discord Username"
+          name="customer.metadata.discord_username"
+          autoComplete="discord_username"
+          value={formData["customer.metadata.discord_username"]}
+          onChange={handleChange}
+          required
+          data-testid="customer-metadata-discord-username-inpu"
+        />
+      
+
         <Input
           label="First name"
           name="shipping_address.first_name"

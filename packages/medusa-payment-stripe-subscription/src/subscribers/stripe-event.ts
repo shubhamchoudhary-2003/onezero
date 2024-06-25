@@ -1,24 +1,25 @@
 import { SubscriberArgs, SubscriberConfig } from "@medusajs/medusa";
-import { handleSubscriptionHook } from "src/utils/handle-subscription";
-import Stripe from "stripe"
+import { handleSubscriptionHook } from "../utils/handle-subscription";
+import Stripe from "stripe";
 
 export default async function stripeEventsHandler({
     data,
     eventName,
-    container,
-  }: SubscriberArgs<Stripe.Event>) {
-   
-    const event = data
-  
-    const paymentIntent = event.data.object as Stripe.PaymentIntent
-    
+    container
+}: SubscriberArgs<Stripe.Event>): Promise<void> {
+    const event = data;
+
+    const paymentIntent = event.data.object as Stripe.PaymentIntent;
+
     await handleSubscriptionHook({
-        event:data,container,paymentIntent  
-    })
-  
+        event: data,
+        container,
+        paymentIntent
+    });
+
     // Do something with the order
-  }
-  
-  export const config: SubscriberConfig = {
-    event: "medusa.stripe_payment_intent_update",
-  };
+}
+
+export const config: SubscriberConfig = {
+    event: "medusa.stripe_payment_intent_update"
+};

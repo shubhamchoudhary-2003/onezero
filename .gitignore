@@ -4,7 +4,7 @@
 /uploads
 /node_modules
 yarn-error.log
-
+*.tgz
 .idea
 
 coverage
@@ -25,3 +25,4 @@ build
 !.yarn/sdks
 !.yarn/versions
 **/**/node_modules
+medusa-plugins

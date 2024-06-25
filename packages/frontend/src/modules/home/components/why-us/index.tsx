@@ -40,8 +40,8 @@ const WhyUs = () => {
           <div className="border-transparent border-2 rounded-lg p-6 bg-stone-900 transition-all ease-in-out duration-300 cursor-pointer hover:border-yellow-400 max-sm:bg-opacity-60">
             <h4 className="text-2xl mb-4">Exceptional Support</h4>
             <p>
-              We love our Customers. That's why we always aim to offer the best
-              and fastest possible Support.
+              We love our Customers. That is why we always aim to offer the best
+              and fastest possible support.
             </p>
           </div>
         </div>

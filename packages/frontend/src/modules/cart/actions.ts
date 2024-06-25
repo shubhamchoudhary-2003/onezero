@@ -79,10 +79,12 @@ export async function addToCart({
   variantId,
   quantity,
   countryCode,
+  sessionCount=1
 }: {
   variantId: string
   quantity: number
   countryCode: string
+  sessionCount?:number
 }) {
   const cart = await getOrSetCart(countryCode).then((cart) => cart)
 
@@ -95,7 +97,7 @@ export async function addToCart({
   }
 
   try {
-    await addItem({ cartId: cart.id, variantId, quantity })
+    await addItem({ cartId: cart.id, variantId, quantity,sessionCount })
     revalidateTag("cart")
   } catch (e) {
     return "Error adding item to cart"
@@ -105,9 +107,11 @@ export async function addToCart({
 export async function updateLineItem({
   lineId,
   quantity,
+  sessionCount
 }: {
   lineId: string
   quantity: number
+  sessionCount?:number
 }) {
   const cartId = cookies().get("_medusa_cart_id")?.value
 
@@ -124,7 +128,7 @@ export async function updateLineItem({
   }
 
   try {
-    await updateItem({ cartId, lineId, quantity })
+    await updateItem({ cartId, lineId, quantity,sessionCount})
     revalidateTag("cart")
   } catch (e: any) {
     return e.toString()

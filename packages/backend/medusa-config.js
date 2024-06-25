@@ -1,6 +1,30 @@
 const dotenv = require("dotenv");
 const axios = require("axios");
 
+const verification = async (
+    container,
+    req,
+    accessToken,
+    refreshToken,
+    profile,
+    strict
+) => {
+    try {
+        const verifyCallback = require("./dist/utils/validate-discord").default;
+        return await verifyCallback(
+            container,
+            req,
+            accessToken,
+            refreshToken,
+            profile,
+            strict
+        );
+    } catch (e) {
+        const logger = container.resolve("logger");
+        logger.error(e);
+    }
+};
+
 let ENV_FILE_NAME = "";
 switch (process.env.NODE_ENV) {
     case "production":
@@ -35,46 +59,80 @@ const STORE_CORS = process.env.STORE_CORS || "http://localhost:8000";
 const DATABASE_URL =
     process.env.DATABASE_URL || "postgres://localhost/medusa-starter-default";
 
-const OAuth2AuthorizationURL =
+const DiscordAuthorizationURL =
     process.env.OAUTH2_AUTHORIZATION_URL ||
+    "https://discord.com/oauth2/authorize?client_id=1254035984153051176&response_type=code&redirect_uri=http%3A%2F%2Flocalhost%3A9000%2Fstore%2Fauth%2Foauth2%2Fcb&scope=identify+email+connections+guilds+rpc+openid" ||
     "https://discord.com/api/oauth2/authorize";
-const OAuth2TokenURL =
+const DiscordTokenURL =
     process.env.OAUTH2_TOKEN_URL || "https://discord.com/api/oauth2/token";
-const OAuth2ClientId = process.env.OAUTH2_CLIENT_ID || "1242890848341856257";
+const DiscordClientId = process.env.OAUTH2_CLIENT_ID || "1242890848341856257";
 
-const OAuth2ClientSecret = process.env.OAUTH2_CLIENT_SECRET;
+const DiscordClientSecret = process.env.OAUTH2_CLIENT_SECRET;
 
-const OAuth2Scope = process.env.OAUTH2_SCOPE || "identify,email,guilds";
+const DiscordScope = process.env.OAUTH2_SCOPE || "identify,email,guilds";
 
 const REDIS_URL = process.env.REDIS_URL || "redis://localhost:6379";
 
 const BACKEND_URL = process.env.MEDUSA_BACKEND_URL || "http://localhost:9000";
 
-const STORE_URL = process.env.MEDUSA_STORE_URL || "http://localhost:8000";
+const STORE_URL = process.env.MEDUSA_STORE_URL || "http://localhost:3000";
 
-const medusaOathConfig = {
-    type: "oauth2",
+const medusaDiscordOathConfig = {
+    type: "discord",
     strict: "store",
-    identifier: "oauth2",
-    authorizationURL: OAuth2AuthorizationURL,
-    tokenURL: OAuth2TokenURL,
-    clientID: OAuth2ClientId,
-    clientSecret: OAuth2ClientSecret,
-    scope: OAuth2Scope.split(","),
+    identifier: "discord",
+    authorizationURL: DiscordAuthorizationURL,
+    tokenURL: DiscordTokenURL,
+    clientID: DiscordClientId,
+    clientSecret: DiscordClientSecret,
+    scope: DiscordScope.split(","),
     // admin: {
     // callbackUrl: `${BACKEND_URL}/admin/auth/oauth2/cb`,
     // failureRedirect: `${ADMIN_URL}/login`,
     // successRedirect: `${ADMIN_URL}/`,
     // },
     store: {
-        callbackUrl: `${BACKEND_URL}/store/auth/oauth2/cb`,
+        callbackUrl: `${BACKEND_URL}/store/auth/discord/cb`,
         failureRedirect: `${STORE_URL}/login`,
-        successRedirect: `${STORE_URL}/`
+        successRedirect: `${STORE_URL}/`,
+        verifyCallback: verification
+    },
+    parseProfile: (json) => {
+        const profile = {
+            provider: "discord",
+            id: json.id,
+            username: json.username,
+            displayName: json.global_name,
+            email: json.email,
+            name: {
+                familyName: json.family_name,
+                givenName: json.given_name
+            },
+            emails: json.email
+                ? [
+                      {
+                          value: json.email
+                      }
+                  ]
+                : [],
+            _json: json,
+            phoneNumbers: json.phone_number
+                ? [
+                      {
+                          value: json.phone_number ?? ""
+                      }
+                  ]
+                : []
+        };
+
+        return profile;
     }
 };
+console.log(JSON.stringify(medusaDiscordOathConfig));
+
 /** @type {import('medusa-plugin-stripe-subscription').StripeSubscriptionOptions} */
 const stripeSubscriptionConfig = {
-    api_key: process.env.STRIPE_API_TEST_KEY,
+    api_key: process.env.STRIPE_API_WEBHOOK_TEST_SECRET,
     webhook_secret: process.env.STRIPE_API_WEBHOOK_TEST_SECRET,
     /**
      * Use this flag to capture payment immediately (default is false)
@@ -103,7 +161,8 @@ const stripeSubscriptionConfig = {
     shop_base_url: process.env.SHOP_DOMAIN ?? "http://localhost:8000",
     subscription_interval_period:
         parseInt(process.env.SUBSCRIPTION_PERIOD) ?? 30,
-    cancel_at_period_end: true
+    cancel_at_period_end: true,
+    taxes_inclusive: true
 };
 
 const searchOptions = {
@@ -171,12 +230,13 @@ const searchOptions = {
                 images: product.images,
                 title: product.title,
                 description: product.description,
-                type: product.type.value,
+                type: product.type?.value,
                 categories: product.categories?.map((c) => c.name),
                 tags: product.tags
                     ?.map((t) => {
-                        t.value;
+                        return t?.value;
                     })
+                    .filter((f) => f != undefined)
                     .join(",")
                 // other attributes...
             })
@@ -188,7 +248,7 @@ const sendGridParameters = {
     api_key: process.env?.SENDGRID_API_KEY,
     from: process.env?.SENDGRID_NOTIFICATION_FROM_ADDRESS,
     gift_card_created_template: "Thank you for your test gift card",
-    order_placed_template: "order placed card",
+    order_placed_template: process.env.SENDGRID_GUID_ORDER_PLACED,
     order_cancelled_template: "This is a test order cancelled card",
     order_shipped_template: "This is a test order shipped card",
     order_completed_template: "This is a test order completed card",
@@ -210,7 +270,10 @@ const sendGridParameters = {
 const plugins = [
     "medusa-fulfillment-manual",
     "medusa-payment-manual",
-    // "@sgftech/medusa-plugin-product-variant-licenses",
+    {
+        resolve: "@sgftech/medusa-plugin-product-variant-licenses",
+        options: {}
+    },
     {
         resolve: "@medusajs/file-local",
         options: {
@@ -218,12 +281,12 @@ const plugins = [
         }
     },
     {
-        resolve: "medusa-plugin-auth",
+        resolve: "@sgftech/medusa-plugin-auth",
         /** @type {import('medusa-plugin-auth').AuthOptions} */
-        options: medusaOathConfig
+        options: medusaDiscordOathConfig
     },
     {
-        resolve: "medusa-payment-stripe",
+        resolve: "@sgftech/medusa-payment-stripe-subscription",
         options: stripeSubscriptionConfig
     },
     {
@@ -281,6 +344,18 @@ const modules = {
             redisUrl: REDIS_URL
         }
     }
+    // inventoryService: {
+    //     resolve: "@medusajs/inventory",
+    //     options: {
+    //         database: modulesDatabase
+    //     }
+    // },
+    // stockLocationService: {
+    //     resolve: "@medusajs/stock-location",
+    //     options: {
+    //         database: modulesDatabase
+    //     }
+    // }
 };
 
 /** @type {import('@medusajs/medusa').ConfigModule["projectConfig"]} */

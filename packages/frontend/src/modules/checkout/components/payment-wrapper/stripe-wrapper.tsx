@@ -18,9 +18,13 @@ const StripeWrapper: React.FC<StripeWrapperProps> = ({
     stripePromise,
     children,
   }) => {
+    const clientSecret = (paymentSession!.data?.client_secret as string | undefined)||
+    ((paymentSession.data?.latest_invoice as any)?.payment_intent?.client_secret as string | undefined)
     const options: StripeElementsOptions = {
-      clientSecret: paymentSession!.data?.client_secret as string | undefined,
+      clientSecret: clientSecret,  
     }
+
+    console.log(`client secret ${options.clientSecret}`)
   
     if (!stripeKey) {
       throw new Error(
@@ -33,8 +37,9 @@ const StripeWrapper: React.FC<StripeWrapperProps> = ({
         "Stripe promise is missing. Make sure you have provided a valid Stripe key."
       )
     }
-  
-    if (!paymentSession?.data?.client_secret) {
+
+    if (!clientSecret) {
+      console.log(JSON.stringify(paymentSession))
       throw new Error(
         "Stripe client secret is missing. Cannot initialize Stripe."
       )

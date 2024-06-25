@@ -70,7 +70,7 @@ export default class ProductService extends MedusaProductService {
             };
         } else if (data.type?.value.toLowerCase() == "membership") {
             if (
-                data.metadata.subscription == true &&
+                data.metadata?.subscription == true &&
                 !data.metadata.validity_period_days
             ) {
                 data.metadata = {
@@ -102,7 +102,7 @@ export default class ProductService extends MedusaProductService {
                 };
             } else if (data.type?.value.toLowerCase() == "membership") {
                 if (
-                    data.metadata.subscription == true &&
+                    data.metadata?.subscription == true &&
                     !data.metadata.validity_period_days
                 ) {
                     data.metadata = {

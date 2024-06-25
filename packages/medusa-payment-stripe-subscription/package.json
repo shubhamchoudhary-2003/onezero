@@ -1,6 +1,6 @@
 {
-  "name": "medusa-payment-stripe-subscription",
-  "version": "0.0.1",
+  "name": "@sgftech/medusa-payment-stripe-subscription",
+  "version": "0.0.25",
   "description": "A plugin for stripe subscriptions",
   "author": "Medusa (https://medusajs.com)",
   "license": "MIT",

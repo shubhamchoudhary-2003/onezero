@@ -3,6 +3,7 @@ import {
     Customer,
     LineItem,
     LineItemService,
+    Logger,
     Order,
     OrderService,
     OrderStatus,
@@ -12,7 +13,7 @@ import {
 } from "@medusajs/medusa";
 import { IEventBusService } from "@medusajs/types";
 import { orderRelations } from "../subscribers/order-placed";
-
+import axios from "axios";
 type LicenseKeyType = {
     orderId: string;
     lineItemId: string;
@@ -41,6 +42,7 @@ export default class LicenseService extends TransactionBaseService {
     orderService: OrderService;
     productService: ProductService;
     lineItemService: LineItemService;
+    logger: Logger;
 
     constructor(
         container: {
@@ -48,6 +50,7 @@ export default class LicenseService extends TransactionBaseService {
             orderService: OrderService;
             productService: ProductService;
             lineItemService: LineItemService;
+            logger: Logger;
         },
 
         options: Record<string, unknown>
@@ -58,6 +61,7 @@ export default class LicenseService extends TransactionBaseService {
         this.orderService = container.orderService;
         this.productService = container.productService;
         this.lineItemService = container.lineItemService;
+        this.logger = container.logger;
     }
 
     async onOrderPlaced(order: Order): Promise<Order> {
@@ -90,8 +94,23 @@ export default class LicenseService extends TransactionBaseService {
                 continue;
             }
 
-            const keyUrl = product.metadata?.key_url;
-            const licenseKey = await this.generateLicenseKey(keyUrl);
+            const keyUrl = product.metadata?.key_url as string;
+            if (
+                product.metadata.is_dynamic_key &&
+                (!keyUrl == undefined || keyUrl == "")
+            ) {
+                return [];
+            }
+
+            const licenseKey = await this.generateLicenseKey({
+                url: keyUrl,
+                tokenCount: item.metadata.numTokens as number,
+                sessionCount: item.metadata.numSession as number,
+                tokenCountParameterName: product.metadata
+                    ?.tokenCountParameterName as string,
+                sessionCountParameterName: product.metadata
+                    ?.sessionCountParameterName as string
+            });
             const licenseData = {
                 orderId: item.order_id,
                 lineItemId: item.id,
@@ -109,8 +128,42 @@ export default class LicenseService extends TransactionBaseService {
 
         return updatedLineItems;
     }
-    async generateLicenseKey(keyUrl: unknown): Promise<string> {
-        return "xxx-xxx-xxx-xxx";
+    async generateLicenseKey({
+        url,
+        tokenCount,
+        sessionCount,
+        tokenCountParameterName,
+        sessionCountParameterName,
+        resellerPassword = "resellerPassword",
+        resellerUsername = "resellerUsername",
+        resellerUsernameParameterName = "resellerUsername",
+        resellerPasswordParameterName = "resellerPassword",
+        tokenParameterName = "jin_token"
+    }: {
+        url: string;
+        tokenCount: number;
+        sessionCount: number;
+        tokenCountParameterName: string;
+        sessionCountParameterName: string;
+        resellerUsernameParameterName?: string;
+        resellerPasswordParameterName?: string;
+        tokenParameterName?: string;
+        resellerUsername?: string;
+        resellerPassword?: string;
+    }): Promise<string> {
+        const body = {};
+        body[tokenCountParameterName] = tokenCount;
+        body[sessionCountParameterName] = sessionCount;
+        body[resellerUsernameParameterName] = resellerUsername;
+        body[resellerPasswordParameterName] = resellerPassword;
+
+        try {
+            const result = await axios.post(url, body);
+            return result.data?.[tokenParameterName];
+        } catch (e) {
+            this.logger.error(e);
+            throw e;
+        }
     }
 
     async validateLicense(

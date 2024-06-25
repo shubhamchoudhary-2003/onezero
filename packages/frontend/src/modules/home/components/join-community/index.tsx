@@ -26,7 +26,7 @@ const JoinCommunity = () => {
             <div className="border-yellow-400 border-2 w-[64px]"></div>
             <p className="w-[420px] text-[#BCCBD6] max-sm:w-full">
             Get involved in our Discord community , where you can connect, share ideas, exchange settings and participate in exciting events.
-            Don't miss out! Become part of something bigger today!
+            Do not miss out! Become part of something bigger today!
             </p>
             <a href="https://discord.gg/onezero" target="_blank" rel="noopener noreferrer">
               <button className="border-yellow-400 text-yellow-400 font-bold border-2 rounded-md px-10 py-4 bg-gradient-to-t bg-yellow-400/20 transition-all duration-200 ease-in-out hover:bg-yellow-400/30">
