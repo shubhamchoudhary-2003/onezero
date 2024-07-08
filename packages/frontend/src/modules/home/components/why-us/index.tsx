@@ -1,20 +1,20 @@
 import Image from "next/image"
-
+import whyus from "../../../../../public/static/image/why-us-bg.png";
 const WhyUs = () => {
   return (
     <section className="relative overflow-hidden">
       {/* <div className="absolute z-20 left-0 w-[5%] h-full bg-[#000000] max-sm:invisible"></div> */}
-      {/* <div className="absolute top-0 left-0 z-10 w-full h-full flex">
+      <div className="absolute top-0 left-0 z-10 w-full h-full flex">
         <div className="min-w-[100vh] max-lg:w-[750px] h-full bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-black/0 from-0% to-black to-[percentage:70%_75%] max-sm:invisible"></div>
         <div className="flex-1 h-full bg-[#000000]"></div>
-      </div> */}
-      {/* <div className="absolute top-0 left-0 z-10 w-[100vh] h-full bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-black/0 from-0% to-black to-[percentage:70%_75%] max-sm:invisible"></div>
-      <div className="absolute z-20 w-[40%] h-full bg-[#000000] max-sm:invisible"></div> */}
+      </div>
+      <div className="absolute top-0 left-0 z-10 w-[100vh] h-full bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-black/0 from-0% to-black to-[percentage:70%_75%] max-sm:invisible"></div>
+      {/* <div className="absolute z-20 w-[40%] h-full bg-[#000000] max-sm:invisible"></div> */}
       <Image
         width={1980}
         height={1080}
         className="w-full object-cover max-md:h-[700px] max-md:object-cover max-sm:ml-auto max-sm:object-left max-sm:min-w-[1200px] max-sm:translate-x-[-17%]"
-        src="https://upcdn.io/12a1yvj/raw/whyus-bg.png"
+        src={whyus}
         alt=""
       />
       <div className="bg-black h-60 hidden max-lg:block max-md:hidden"></div>

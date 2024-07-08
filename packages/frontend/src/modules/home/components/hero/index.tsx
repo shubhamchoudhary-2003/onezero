@@ -1,12 +1,13 @@
 import { Heading } from "@medusajs/ui"
 import Link from "next/link"
 import { BsCaretDown } from "react-icons/bs"
-
+import Herobg from "../../../../../public/static/image/hero-bg.png";
 const Hero = () => {
   return (
-    <section className="relative h-[100vh] bg-[url('https://upcdn.io/12a1yvj/raw/hero-bg.png')] bg-cover">
+    <section className="relative h-[100vh] bg-cover bg-center"
+      style={{ backgroundImage: `url(${Herobg.src})` }}>
       <div className="absolute z-10 w-full h-full bg-gradient-to-b from-zinc-950 from-0% via-zinc-950/60 via-[percentage:15%_80%] to-zinc-950 to-100%"></div>
-      <div className="absolute z-20 left-[50%] top-[50%] translate-x-[-50%] translate-y-[-50%] w-[725px] max-md:w-full">
+      <div className="absolute z-20 left-[50%] top-[60%] translate-x-[-50%] translate-y-[-50%] w-[725px] max-md:w-full">
         <div className="flex flex-col items-center max-sm:px-10 max-xl:pt-20 max-xl:px-5">
           <Heading
             className="text-8xl tracking-wider text-center mb-3 font-['Bebas_Neue'] max-md:text-7xl"

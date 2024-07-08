@@ -1,5 +1,5 @@
 import Image from "next/image"
-
+import community from "../../../../../public/static/image/community.svg"
 const JoinCommunity = () => {
   return (
     <div className="relative flex flex-col justify-center h-[100vh] bg-[url(https://upcdn.io/12a1yvj/raw/community-bg.png)] max-sm:h-[650px]">
@@ -11,7 +11,7 @@ const JoinCommunity = () => {
             className="w-[70%] h-auto max-lg:w-[100%]"
             width={120}
             height={70}
-            src={"https://upcdn.io/12a1yvj/raw/community.svg"}
+            src={community}
             alt="Logo"
           />
         </div>

@@ -5,7 +5,7 @@ import Image from "next/image"
 import Link from "next/link"
 import { FaDiscord } from "react-icons/fa6"
 import { FaYoutube } from "react-icons/fa6"
-
+import  logo from "../../../../../public/static/image/logo.png"
 const Nav = () => {
   const [isExpand, setIsExpand] = useState(false)
 
@@ -22,7 +22,7 @@ const Nav = () => {
               className="w-auto h-[70px] max-lg:h-[50px] max-md:h-[42px]"
               width={120}
               height={70}
-              src={"https://upcdn.io/12a1yvj/raw/logo.png"}
+              src={logo}
               alt="Logo"
             />
           </Link>
